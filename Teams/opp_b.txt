@@ -1,0 +1,37 @@
+Landorus-Therian @ Rocky Helmet
+Ability: Intimidate
+EVs: 252 HP / 4 Atk / 252 Def
+Impish Nature
+- Stealth Rock
+- Earthquake
+- U-turn
+- Stone Edge
+
+Gholdengo @ Leftovers
+Ability: Good as Gold
+EVs: 252 HP / 4 SpA / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Nasty Plot
+- Make It Rain
+- Shadow Ball
+- Recover
+
+Zamazenta @ Leftovers
+Ability: Dauntless Shield
+EVs: 252 HP / 4 Def / 252 Spe
+Jolly Nature
+- Iron Defense
+- Body Press
+- Crunch
+- Roar
+
+Kyurem @ Choice Specs
+Ability: Pressure
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Freeze-Dry
+- Earth Power
+- Draco Meteor
+- Ice Beam

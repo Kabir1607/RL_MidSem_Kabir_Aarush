@@ -1,0 +1,37 @@
+Glimmora @ Focus Sash
+Ability: Toxic Debris
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Stealth Rock
+- Mortal Spin
+- Power Gem
+- Earth Power
+
+Dragapult @ Choice Specs
+Ability: Infiltrator
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Shadow Ball
+- Draco Meteor
+- Flamethrower
+- U-turn
+
+Dragonite @ Heavy-Duty Boots
+Ability: Multiscale
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Dragon Dance
+- Extreme Speed
+- Earthquake
+- Ice Spinner
+
+Iron Valiant @ Choice Specs
+Ability: Quark Drive
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Moonblast
+- Shadow Ball
+- Thunderbolt
+- Vacuum Wave

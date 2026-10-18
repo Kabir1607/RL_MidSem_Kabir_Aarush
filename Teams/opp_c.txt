@@ -1,0 +1,37 @@
+Corviknight @ Leftovers
+Ability: Pressure
+EVs: 252 HP / 168 Def / 88 SpD
+Impish Nature
+- Defog
+- Roost
+- Brave Bird
+- U-turn
+
+Clefable @ Leftovers
+Ability: Magic Guard
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+IVs: 0 Atk
+- Calm Mind
+- Moonblast
+- Moonlight
+- Flamethrower
+
+Gliscor @ Toxic Orb
+Ability: Poison Heal
+EVs: 244 HP / 12 Def / 252 Spe
+Jolly Nature
+- Earthquake
+- Knock Off
+- Protect
+- Spikes
+
+Raging Bolt @ Leftovers
+Ability: Protosynthesis
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+IVs: 20 Atk
+- Calm Mind
+- Thunderclap
+- Dragon Pulse
+- Thunderbolt

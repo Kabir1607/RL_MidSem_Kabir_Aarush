@@ -1,0 +1,37 @@
+Great Tusk @ Leftovers
+Ability: Protosynthesis
+EVs: 252 Atk / 4 Def / 252 Spe
+Jolly Nature
+- Headlong Rush
+- Close Combat
+- Ice Spinner
+- Rapid Spin
+
+Moltres @ Heavy-Duty Boots
+Ability: Flame Body
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Fire Blast
+- Hurricane
+- Roost
+- U-turn
+
+Primarina @ Choice Specs
+Ability: Torrent
+EVs: 252 HP / 252 SpA / 4 SpD
+Modest Nature
+IVs: 0 Atk
+- Hydro Pump
+- Moonblast
+- Blizzard
+- Flip Turn
+
+Kingambit @ Leftovers
+Ability: Supreme Overlord
+EVs: 252 HP / 252 Atk / 4 SpD
+Adamant Nature
+- Swords Dance
+- Kowtow Cleave
+- Sucker Punch
+- Iron Head

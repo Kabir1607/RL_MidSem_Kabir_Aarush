@@ -1,0 +1,11 @@
+metadata = {
+    "team_version (low/high)": "the manipulated variable",
+    "pilot (random/maxbp/heuristic)": "which baseline",
+    "opponent_team (A/B/C)": "win rates may differ a lot by matchup; lets you check the rotation was balanced",
+    "won (1/0)": "win rate",
+    "turns": "battle length (HighVar may run longer)",
+    "our_remaining (0-4), opp_remaining (0-4)": "how close the battle was, which is finer-grained than win/loss",
+    "swap_moves_used, swap_moves_missed": "miss rate on the swapped moves specifically, your manipulation check",
+    "all_moves_used, all_moves_missed": "overall miss rate, including the opponent's",
+    "battle_tag": "to find the replay or log later",
+}

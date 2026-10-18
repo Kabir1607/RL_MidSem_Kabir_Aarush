@@ -1,11 +1,14 @@
-After cloning run: 
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python src/main.py 
+After cloning pokemon-showdown run: 
 
 For pokemon-showdown running server: 
 cd pokemon-showdown
 npm install
 cp config/config-example.js config/config.js
 node pokemon-showdown start --no-security
+
+Then:
+python -m venv venv // create a venv if not there
+source venv/bin/activate
+pip install -r requirements.txt
+python src/main.py 
+

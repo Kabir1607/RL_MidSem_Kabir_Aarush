@@ -1,0 +1,8 @@
+algo,team,seed,status,last_step,battles_trained,b_team,auc,threshold_step,largest_drop,std_last5,final_win_rate,final_wilson_low,final_wilson_high,rl_lift,final_wr_vs_A,final_wr_vs_B,final_wr_vs_C,final_wr_random,final_wr_maxbp,mean_len_steps_last,threshold_reached
+ppo,highvar,0,in progress,110000.0000,7997.0000,0.4373,0.8167,20000.0000,0.2083,0.0932,,,,,,,,,,12.0700,
+ppo,lowvar,0,in progress,110000.0000,8007.0000,0.4287,0.8788,20000.0000,0.0000,0.0000,,,,,,,,,,11.6450,
+ppo,lowvar,1,in progress,110000.0000,7007.0000,0.4287,0.8814,0.0000,0.1083,0.0070,,,,,,,,,,13.4150,
+ppo,highvar,mean,1 seeds,110000.0000,7997.0000,0.4373,0.8167,20000.0000,0.2083,0.0932,,,,,,,,,,12.0700,1/1
+ppo,highvar,std,1 seeds,,,,,,,,,,,,,,,,,,
+ppo,lowvar,mean,2 seeds,110000.0000,7507.0000,0.4287,0.8801,10000.0000,0.0542,0.0035,,,,,,,,,,12.5300,2/2
+ppo,lowvar,std,2 seeds,0.0000,707.1068,0.0000,0.0019,14142.1356,0.0766,0.0049,,,,,,,,,,1.2516,

@@ -1,0 +1,4 @@
+run_id,algo,team,seed,status,last_step,commit,errors,notes
+ppo_highvar_s0,ppo,highvar,0,in progress,110000,ac13fc053a,,
+ppo_lowvar_s0,ppo,lowvar,0,in progress,110000,ac13fc053a,,
+ppo_lowvar_s1,ppo,lowvar,1,in progress,110000,ac13fc053a,,

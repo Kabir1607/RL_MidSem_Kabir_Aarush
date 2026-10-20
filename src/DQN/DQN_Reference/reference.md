@@ -19,7 +19,9 @@ reflects the code as it is and wins.
 - [ ] Logging and evaluation through `recorder.RunRecorder` (Section 6): eval at step 0 and every 10,000 steps,
       120 battles stratified 40/40/40, deterministic (greedy) policy; final evaluation at the end.
 - [ ] Hyperparameters fixed **before** the runs and identical across all 6 runs (Section 5.5).
-- [ ] Tests in Section 8 pass, including a 20k-step smoke run against `RandomPlayer`.
+- [ ] Outputs follow the contract in Section 7 (checked by `python src/analyze.py --partial`), including the
+      final checkpoint and `src/DQN/policy.py: load_policy()` for the move-usage replay.
+- [ ] Tests in Section 9 pass, including a 20k-step smoke run against `MaxBasePowerPlayer`.
 
 ---
 
@@ -74,7 +76,9 @@ src/
   recorder.py               RunRecorder: algorithm-agnostic logging/evaluation  <- you use this
   callbacks.py              SB3 callbacks wrapping RunRecorder (PPO uses these; usable by SB3-based DQN)
   train_ppo.py              the PPO trainer (a working example of the whole pipeline)
-  DQN/                      <- DQN code goes here (e.g. src/DQN/train_dqn.py)
+  run_batch.py              runs the 6 runs N at a time (PPO; add your trainer to TRAINERS)
+  analyze.py                validates all runs (Section 7) and makes the comparison figures/tables
+  DQN/                      <- DQN code goes here: train_dqn.py, policy.py (load_policy, Section 7)
 tests/                      pytest suite (needs the Showdown server for live tests)
 runs/<algo>_<team>_s<seed>/ outputs per run
 ```
@@ -96,7 +100,7 @@ from recorder import RunRecorder, seed_everything
 **Running anything:**
 
 ```bash
-# terminal 1: Showdown server (restart it before each batch; see Section 9)
+# terminal 1: Showdown server (restart it before each batch; see Section 10)
 cd pokemon-showdown && node pokemon-showdown start --no-security
 # terminal 2
 source venv/bin/activate          # Python 3.14, versions pinned in requirements.txt
@@ -339,7 +343,54 @@ The evaluation env lives in the same process as the training env; this is tested
 
 ---
 
-## 7. Metrics (computed from the files above, same for both algorithms)
+## 7. Output contract (what `src/analyze.py` expects)
+
+`src/analyze.py` reads every run, checks it against this contract and marks it **complete**, **in progress**
+or **invalid**. Invalid runs are left out of every figure and table and listed with the reason in
+`figures/runs_index.csv`. `RunRecorder` produces items 1–5 automatically; items 6–7 are your
+responsibility. Check your runs at any time, even mid-training: `python src/analyze.py --partial`.
+
+1. **Location and name:** `runs/dqn_<team>_s<seed>/`, with team `lowvar`/`highvar` and seed 0/1/2, exactly.
+   Anything else (e.g. a `_smoke` suffix) is skipped. If you train on another machine, copy the whole run
+   directory into `runs/` (`ckpt/` is needed for item 6; `tb/` and `diagnostics.csv` are optional).
+2. **`run_config.json`:** `algo`/`team`/`seed` match the directory; `eval_opponent` is `"heuristic"`; these
+   `config` values equal the repo's `config.py`: `BATTLE_FORMAT, N_TEAM, GAMMA, MAX_EPISODE_STEPS, NET_ARCH,
+   TOTAL_STEPS, EVAL_FREQ, N_EVAL, EVAL_OPP_ORDER, FINAL_EVAL_N_HEURISTIC, FINAL_EVAL_N_SANITY,
+   THRESHOLD_MARGIN, THRESHOLD_CONSECUTIVE`. The `hyperparameters` dict MUST be identical in all 6 DQN runs
+   (otherwise all of them are marked invalid). All 6 should come from the same git commit (warning
+   otherwise); a start from uncommitted code is noted.
+3. **`eval.csv`:** exactly the columns of Section 6, in that order; one `run_id, algo, team, seed`; steps
+   0, 10,000, 20,000, … with no gaps or repeats; every row has `eval_n = 120` and `wins + losses + ties = 120`.
+   The run is complete when the last step is 2,000,000.
+4. **`train_episodes.csv`:** exactly the columns of Section 6; `step` non-decreasing; `battle_idx` 1, 2, 3, …;
+   no step beyond 2,000,000 (training past the budget is an error); `disc_shaping_sum` ≈ 0 (noted otherwise).
+5. **`final_eval.csv`:** exactly the columns of `recorder.FINAL_FIELDS`; exactly three rows, heuristic (1,020
+   battles), random (204) and maxbp (204), all at step 2,000,000.
+6. **Checkpoints:** `ckpt/step_<step>.pt` at every evaluation via the `save` callback; the final one,
+   `ckpt/step_2000000.pt`, MUST exist (noted if missing). It is needed for the move-usage replay below.
+7. **Policy loader:** `src/DQN/policy.py` MUST provide
+
+   ```python
+   def load_policy(checkpoint_path: Path) -> Callable[[np.ndarray, np.ndarray], int]:
+       """Greedy policy over legal actions from a checkpoint written by your save() callback.
+       Standalone (no training objects), CPU, no exploration; rebuilds the 763 -> 256 -> 256 -> 26 network."""
+   ```
+
+   **Why (move-usage replay, planned):** after both batches, a separate script will replay each run's final
+   checkpoint against the heuristic with Showdown battle logs on, and measure how often each agent uses the
+   swapped moves (Fire Blast, Hurricane, Hydro Pump, Blizzard vs Flamethrower, Air Slash, Surf, Ice Beam) and
+   how often they miss: the manipulation check, and a direct look at whether the agents learn to avoid
+   inaccurate moves. It loads PPO with `MaskablePPO.load` + `callbacks.masked_greedy`, and DQN with
+   `load_policy`.
+
+What `analyze.py` produces from complete runs (in `figures/`): `runs_index.csv`, `summary.csv` (one row per
+run, plus mean and std per algorithm × team), `contrasts.csv` (HighVar − LowVar per algorithm, and the
+DQN − PPO interaction for RQ2), `curves_ppo.png`, `curves_dqn.png`, `threshold_steps.png`,
+`interaction_auc.png`, `interaction_lift.png`, `ep_len.png`.
+
+---
+
+## 8. Metrics (computed by `src/analyze.py`, same for both algorithms)
 
 * **Wilson 95% interval** for each evaluation win rate.
 * **Threshold steps:** first evaluation step where win rate ≥ b_team + 0.10 for 2 consecutive evaluations
@@ -352,7 +403,7 @@ The evaluation env lives in the same process as the training env; this is tested
 
 ---
 
-## 8. Verification before the main runs (MUST pass)
+## 9. Verification before the main runs (MUST pass)
 
 1. `python -m pytest` passes (shared environment tests).
 2. Your own tests for the DQN code, at least:
@@ -368,13 +419,13 @@ The evaluation env lives in the same process as the training env; this is tested
    --suffix smoke --skip-final-eval`): 0.458 → 0.617 → 0.908. DQN learns more slowly early on
    (learning_starts, ε-decay), so for the smoke run shorten them (e.g. learning_starts 1,000, ε over 10,000
    steps); the main runs use the agreed table.
-4. Determinism of evaluation: the same checkpoint gives the same action for the same observation.
+4. Determinism of evaluation: `load_policy(ckpt)` twice gives the same action for the same observation.
 5. Healthy signs during the main runs: Q-values stay bounded (|Q| should stay near the [−1.5, 1.5] range
    the rewards allow), loss does not explode, `train_episodes.csv` shows `disc_shaping_sum` ≈ 0.
 
 ---
 
-## 9. Operations and pitfalls
+## 10. Operations and pitfalls
 
 | Pitfall | Symptom | Fix |
 | :-- | :-- | :-- |
@@ -398,7 +449,7 @@ comparable to PPO's, so the environment dominates either way.
 
 ---
 
-## 10. References
+## 11. References
 
 * V. Mnih et al., "Human-level control through deep reinforcement learning", *Nature* 518, 2015 (DQN).
 * H. van Hasselt, "Double Q-learning", NeurIPS 2010; van Hasselt, Guez & Silver, "Deep Reinforcement

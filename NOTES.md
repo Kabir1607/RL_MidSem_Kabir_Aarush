@@ -120,3 +120,16 @@ about 5.5–6 h for all 6 runs of one algorithm in parallel. The DQN arm uses th
 
 10. **Gymnasium 1.x wrappers don't forward attributes.** `Monitor(env).action_masks()` raises
     AttributeError. Use `env.get_wrapper_attr("action_masks")()`, which is what sb3-contrib does.
+
+11. **poke-env needs numpy integer actions.** `SinglesEnv.action_to_order` calls `action.item()`, so a plain
+    `int` move action crashes. `OTSWrapper.step` converts with `np.int64(action)`.
+
+12. **Two envs in one process work.** The training env and the evaluation env each run their own poke-env
+    event-loop thread; in-training evaluation in the SB3 callback works while the training battle waits.
+    The spec's `eval_watch.py` fallback is not needed.
+
+13. **Smoke test (spec test 7) needs MaxBasePower, not Random.** An untrained greedy policy already beats
+    `RandomPlayer` ~87% (eval 0.867 → 0.867 → 0.908 over 20k steps: learning is visible only in training
+    battles, win rate 0.71 → 0.96). Against `MaxBasePowerPlayer`: **0.458 → 0.617 → 0.908**, with the
+    first and last Wilson intervals disjoint. PPO diagnostics in the smoke runs: approx_kl ≈ 0.01,
+    clip fraction 0.16–0.22, explained variance rising to 0.17–0.40.

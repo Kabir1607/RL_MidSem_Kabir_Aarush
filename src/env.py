@@ -105,7 +105,7 @@ class OTSWrapper(Wrapper):
         return obs["observation"], info
 
     def step(self, action):
-        obs, _, _, _, info = self.env.step(action)
+        obs, _, _, _, info = self.env.step(np.int64(action))  # poke-env calls action.item()
         while not self.battle.finished and not self.env.env.agent1_to_move:
             obs, _, _, _, info = self.env.step(np.int64(0))  # ignored by poke-env; only the opponent acts
             self._waits += 1

@@ -43,14 +43,16 @@ class RandomOpponentTeambuilder(OpponentTeambuilder):
 
 class StratifiedOpponentTeambuilder(OpponentTeambuilder):
     """n_per_team battles against each team in a fixed order (A..., B..., C...), then repeats.
-    Call restart() before each evaluation."""
+    Call restart() before each evaluation, optionally with a new n_per_team."""
 
     def __init__(self, n_per_team, order=config.EVAL_OPP_ORDER):
         super().__init__()
-        self.schedule = [key for key in order for _ in range(n_per_team)]
-        self.restart()
+        self.order = order
+        self.restart(n_per_team)
 
-    def restart(self):
+    def restart(self, n_per_team=None):
+        if n_per_team is not None:
+            self.schedule = [key for key in self.order for _ in range(n_per_team)]
         self.i = 0
 
     def next_key(self):

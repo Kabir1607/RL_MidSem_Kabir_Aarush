@@ -41,6 +41,8 @@ ACTION_SPACE_SIZE = 26  # SinglesEnv, gen 9
 # ---------- learners ----------
 
 NET_ARCH = [256, 256]  # shared with the DQN arm (spec Section 5.4)
+DEVICE = "cpu"  # small MLPs; 6 processes share the machine
+TORCH_THREADS = 1  # per process (benchmarked in NOTES.md)
 SEEDS = (0, 1, 2)
 TOTAL_STEPS = 2_000_000  # decision steps per run (as counted by env.make_env), identical for every run of both algorithms
 

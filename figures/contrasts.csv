@@ -1,2 +1,2 @@
 contrast,auc_lowvar,auc_highvar,delta_auc,delta_threshold_step,lift_lowvar,lift_highvar,lift_difference,seed_std_final_wr_lowvar,seed_std_final_wr_highvar
-ppo,0.8801,0.8167,-0.0634,10000.0000,,,,,
+ppo,0.9069,0.9057,-0.0012,-3000.0000,0.5711,0.5621,-0.0090,0.0004,0.0013

@@ -55,6 +55,7 @@ pyparsing==3.3.3
 python-dateutil==2.9.0.post0
 requests==2.34.2
 rich==15.0.0
+sb3_contrib==2.9.0
 setuptools==84.0.0
 six==1.17.0
 stable_baselines3==2.9.0

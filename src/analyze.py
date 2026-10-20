@@ -249,6 +249,11 @@ def style():
     })
 
 
+def fmt_steps(x, _=None):
+    """0, 50k, 200k, 1.5M"""
+    return "0" if not x else f"{x / 1e6:g}M" if abs(x) >= 1e6 else f"{x / 1e3:g}k"
+
+
 def save(fig, path):
     tmp = path.with_suffix(".tmp.png")
     fig.savefig(tmp, bbox_inches="tight")
@@ -293,7 +298,7 @@ def plot_curves(runs, algo, out):
     ax.set(xlim=(0, config.TOTAL_STEPS * 1.06), ylim=(0, 1), xlabel="decision steps",
            ylabel="evaluation win rate vs heuristic (120 battles)",
            title=f"{algo.upper()}: LowVar vs HighVar learning curves")
-    ax.xaxis.set_major_formatter(lambda x, _: f"{x / 1e6:g}M" if x else "0")
+    ax.xaxis.set_major_formatter(fmt_steps)
     ax.legend(loc="lower right", fontsize=8)
     save(fig, out / f"curves_{algo}.png")
 
@@ -348,7 +353,7 @@ def plot_thresholds(per_run, out):
     ax.set_xticks(range(len(cells)), [f"{a.upper()}\n{TEAM_LABEL[t]}" for a, t in cells])
     ax.set(xlim=(-0.5, len(cells) - 0.5), ylim=(0, top * 1.06), ylabel="decision steps to threshold",
            title=f"Steps to heuristic baseline + {config.THRESHOLD_MARGIN:.2f} (2 evaluations in a row)")
-    ax.yaxis.set_major_formatter(lambda y, _: f"{y / 1e6:g}M" if y else "0")
+    ax.yaxis.set_major_formatter(fmt_steps)
     save(fig, out / "threshold_steps.png")
 
 
@@ -365,7 +370,7 @@ def plot_ep_len(runs, out):
                 ax.plot(ep["step"], rolling, color=TEAM_COLOR[team], lw=1.2, alpha=0.8,
                         label=TEAM_LABEL[team] if j == 0 else None)
         ax.set(title=algo.upper(), xlabel="decision steps")
-        ax.xaxis.set_major_formatter(lambda x, _: f"{x / 1e6:g}M" if x else "0")
+        ax.xaxis.set_major_formatter(fmt_steps)
         ax.legend(fontsize=8)
     axes[0][0].set_ylabel(f"training battle length (steps, rolling {config.EP_LEN_ROLLING_WINDOW} battles)")
     save(fig, out / "ep_len.png")
@@ -412,7 +417,7 @@ def main():
         if any(r.algo == algo for r in use):
             plot_curves(use, algo, args.out)
     plot_thresholds(per_run, args.out)
-    plot_interaction(per_run, "auc", f"AUC: mean eval win rate over {config.TOTAL_STEPS / 1e6:g}M steps",
+    plot_interaction(per_run, "auc", f"AUC: mean eval win rate over {fmt_steps(config.TOTAL_STEPS)} steps",
                      "Sample efficiency (RQ2)", "interaction_auc.png", args.out)
     plot_interaction(per_run, "rl_lift", "final win rate − heuristic baseline", "RL lift (RQ3)",
                      "interaction_lift.png", args.out, ref=0)

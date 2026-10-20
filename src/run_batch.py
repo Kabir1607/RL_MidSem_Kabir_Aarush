@@ -1,4 +1,4 @@
-"""Run the 6 main runs of one algorithm ({lowvar, highvar} x seeds 0-2), N at a time (spec Section 5.2).
+"""Run the main runs of one algorithm (config.TEAMS x config.SEEDS), N at a time (spec Section 5.2).
 
 Each run is its own process with its own log, runs/logs/<run_id>.log; a new run starts as soon as one
 finishes. A failed run does not stop the others. Refuses to start from uncommitted code, so every

@@ -108,6 +108,7 @@ def test_end_to_end_outputs(tmp_path, monkeypatch):
                  "threshold_steps.png", "interaction_auc.png", "interaction_lift.png", "ep_len.png"):
         assert (out / name).exists(), name
     summary = pd.read_csv(out / "summary.csv")
-    assert len(summary) == 12 + 8  # 12 runs + mean/std for 4 cells
+    n_cells = len(analyze.ALGOS) * len(config.TEAMS)
+    assert len(summary) == n_cells * len(config.SEEDS) + 2 * n_cells  # every run + mean/std per cell
     contrasts = pd.read_csv(out / "contrasts.csv")
     assert list(contrasts["contrast"]) == ["ppo", "dqn", "dqn_minus_ppo (RQ2 interaction)"]

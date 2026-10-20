@@ -43,8 +43,10 @@ ACTION_SPACE_SIZE = 26  # SinglesEnv, gen 9
 NET_ARCH = [256, 256]  # shared with the DQN arm (spec Section 5.4)
 DEVICE = "cpu"  # small MLPs; 6 processes share the machine
 TORCH_THREADS = 1  # per process (benchmarked in NOTES.md)
-SEEDS = (0, 1, 2)
-TOTAL_STEPS = 2_000_000  # decision steps per run (as counted by env.make_env), identical for every run of both algorithms
+SEEDS = (0, 1, 2, 3, 4)
+# Decision steps per run (as counted by env.make_env), identical for every run of both algorithms. The 2M-step
+# pilot (runs/pilot_2M, NOTES.md) reached 100% eval win rate by 30k-80k steps; 200k covers convergence.
+TOTAL_STEPS = 200_000
 
 PPO_KWARGS = dict(
     learning_rate=3e-4,
@@ -63,7 +65,7 @@ PPO_KWARGS = dict(
 
 # ---------- evaluation (spec Section 6) ----------
 
-EVAL_FREQ = 10_000  # decision steps between in-training evaluations
+EVAL_FREQ = 5_000  # decision steps between in-training evaluations (dense: learning happens in the first ~50k)
 N_EVAL = 120  # battles per evaluation, stratified 40 per opponent team
 EVAL_OPP_ORDER = ("A", "B", "C")
 FINAL_EVAL_N_HEURISTIC = 1020  # 340 per opponent team

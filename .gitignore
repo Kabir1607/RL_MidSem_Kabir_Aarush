@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 .~lock.*#
-runs/*/ckpt/
-runs/*/tb/
-runs/logs/
+runs/**/ckpt/
+runs/**/tb/
+runs/**/logs/
+runs/replays/

@@ -62,7 +62,7 @@ def main():
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--threads", type=int, default=1, help="torch threads per process")
     ap.add_argument("--budget-hours", type=float, help="print the TOTAL_STEPS this throughput allows")
-    ap.add_argument("--runs", type=int, default=6, help="runs in the batch (2 teams x 3 seeds)")
+    ap.add_argument("--runs", type=int, default=len(config.TEAMS) * len(config.SEEDS), help="runs in the batch")
     args = ap.parse_args()
 
     ctx = mp.get_context("spawn")

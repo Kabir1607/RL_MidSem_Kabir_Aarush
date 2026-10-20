@@ -11,14 +11,14 @@ reflects the code as it is and wins.
 
 ## 0. Checklist
 
-- [ ] Budget: **`config.TOTAL_STEPS` = 2,000,000 decision steps per run**, 6 runs: {lowvar, highvar} × seeds {0, 1, 2}.
+- [ ] Budget: **`config.TOTAL_STEPS` = 200,000 decision steps per run**, 10 runs: {lowvar, highvar} × seeds {0, 1, 2, 3, 4}.
 - [ ] Environment from `env.make_env(team, seed, algo="dqn")`. Never raw poke-env.
 - [ ] γ = `config.GAMMA` (0.99), hidden layers `config.NET_ARCH` ([256, 256]), one env per process.
 - [ ] Action masks used in **three** places: ε-exploration, greedy action, and the max in the TD target (Section 5.3).
 - [ ] Terminal vs truncated handled correctly in the TD target (Section 5.4).
-- [ ] Logging and evaluation through `recorder.RunRecorder` (Section 6): eval at step 0 and every 10,000 steps,
+- [ ] Logging and evaluation through `recorder.RunRecorder` (Section 6): eval at step 0 and every 5,000 steps,
       120 battles stratified 40/40/40, deterministic (greedy) policy; final evaluation at the end.
-- [ ] Hyperparameters fixed **before** the runs and identical across all 6 runs (Section 5.5).
+- [ ] Hyperparameters fixed **before** the runs and identical across all 10 runs (Section 5.5).
 - [ ] Outputs follow the contract in Section 7 (checked by `python src/analyze.py --partial`), including the
       final checkpoint and `src/DQN/policy.py: load_policy()` for the move-usage replay.
 - [ ] Tests in Section 9 pass, including a 20k-step smoke run against `MaxBasePowerPlayer`.
@@ -76,7 +76,7 @@ src/
   recorder.py               RunRecorder: algorithm-agnostic logging/evaluation  <- you use this
   callbacks.py              SB3 callbacks wrapping RunRecorder (PPO uses these; usable by SB3-based DQN)
   train_ppo.py              the PPO trainer (a working example of the whole pipeline)
-  run_batch.py              runs the 6 runs N at a time (PPO; add your trainer to TRAINERS)
+  run_batch.py              runs the 10 runs N at a time (PPO; add your trainer to TRAINERS)
   analyze.py                validates all runs (Section 7) and makes the comparison figures/tables
   DQN/                      <- DQN code goes here: train_dqn.py, policy.py (load_policy, Section 7)
 tests/                      pytest suite (needs the Showdown server for live tests)
@@ -123,8 +123,8 @@ env = make_env(team, seed, role="train", opponent="heuristic", algo="dqn", opp_p
 * `role="train"` for the training env. The evaluation env is built for you by `RunRecorder`.
 * `algo="dqn"` makes the Showdown account names `dqn_lv0_agent_xxxx` etc.; the 4-hex suffix is random per
   process launch so crashed runs never collide (NOTES.md item 9).
-* Returns a Gymnasium env (SB3 `Monitor` around `OTSWrapper`). `n_envs = 1` per process; run the 6 runs as
-  6 separate processes.
+* Returns a Gymnasium env (SB3 `Monitor` around `OTSWrapper`). `n_envs = 1` per process; run each run as its
+  own process (several in parallel).
 
 ### 4.1 Time step
 
@@ -202,14 +202,14 @@ small (|r'| ≪ 1); the last step carries roughly ±1.
 
 | Item | Value | Where |
 | :-- | :-- | :-- |
-| Step budget | 2,000,000 decision steps per run, stop exactly there | `config.TOTAL_STEPS` |
-| Runs | lowvar/highvar × seeds 0, 1, 2 | `config.TEAMS`, `config.SEEDS` |
+| Step budget | 200,000 decision steps per run, stop exactly there | `config.TOTAL_STEPS` |
+| Runs | lowvar/highvar × seeds 0, 1, 2, 3, 4 | `config.TEAMS`, `config.SEEDS` |
 | Discount | 0.99 | `config.GAMMA` |
 | Q-network | MLP 763 → 256 → 256 → 26, ReLU (same hidden sizes as PPO's actor and critic) | `config.NET_ARCH` |
 | Envs | 1 per process | |
 | Seeding | `random`, `numpy`, `torch` from the run seed | `recorder.seed_everything(seed)` |
 | Device | CPU, 1 torch thread per process (6 processes share 12 cores) | `config.DEVICE`, `config.TORCH_THREADS` |
-| Evaluation | step 0 and every 10,000 steps, 120 battles (40 per opponent team), greedy over legal actions | `RunRecorder.evaluate` |
+| Evaluation | step 0 and every 5,000 steps, 120 battles (40 per opponent team), greedy over legal actions | `RunRecorder.evaluate` |
 | Final evaluation | 1,020 vs heuristic (340 per team) + 204 vs Random + 204 vs MaxBasePower | `RunRecorder.final` |
 | run_id | `dqn_<team>_s<seed>` | `config.run_id("dqn", team, seed)` |
 
@@ -260,17 +260,17 @@ Bootstrap through `truncated` (time-limit) transitions, never through `terminate
 The spec fixes none for DQN. PPO uses the spec's configuration, which is close to library defaults and
 **untuned**; to keep tuning effort equal, start from **SB3's DQN defaults** and change only what the
 problem forces. Agree on the final table **before** the main runs, write it into `run_config.json`, and
-never change it between the 6 runs.
+never change it between the 10 runs.
 
 | Hyperparameter | SB3 default | Suggested | Why |
 | :-- | :-- | :-- | :-- |
 | learning_rate | 1e-4 | 1e-4 | default |
-| buffer_size | 1,000,000 | **100,000** | 1M × 763 floats × 2 (obs, next obs) ≈ 6.1 GB per run, 36 GB for 6 runs; the dev machine has 14 GB. 100k ≈ 0.6 GB (≈ 5,500 battles). |
-| learning_starts | 100 | 10,000 | fill the buffer with a few hundred battles first |
+| buffer_size | 1,000,000 | **100,000** | 1M × 763 floats × 2 (obs, next obs) ≈ 6.1 GB per run; the dev machine has 14 GB. 100k ≈ 0.6 GB (≈ 5,500 battles, half a run). |
+| learning_starts | 100 | 5,000 | fill the buffer with ~300 battles first (2.5% of the budget) |
 | batch_size | 32 | 32 | default |
 | train_freq / gradient_steps | 4 / 1 | 4 / 1 | default |
-| target_update_interval | 10,000 (hard, tau = 1) | 10,000 | default |
-| exploration | 1.0 → 0.05 over 10% of training | 1.0 → 0.05 over the first 200,000 steps | default (10% of 2M) |
+| target_update_interval | 10,000 (hard, tau = 1) | 2,000 | the default assumes multi-million-step budgets: 10k would give only 20 syncs in 200k steps; 2k ≈ PPO's update period (2,048) |
+| exploration | 1.0 → 0.05 over 10% of training | 1.0 → 0.05 over the first 20,000 steps | default (10% of 200k) |
 | max_grad_norm | 10 | 10 | default |
 | loss | Huber | Huber | default |
 | gamma | 0.99 | `config.GAMMA` | fixed |
@@ -360,14 +360,14 @@ responsibility. Check your runs at any time, even mid-training: `python src/anal
    (otherwise all of them are marked invalid). All 6 should come from the same git commit (warning
    otherwise); a start from uncommitted code is noted.
 3. **`eval.csv`:** exactly the columns of Section 6, in that order; one `run_id, algo, team, seed`; steps
-   0, 10,000, 20,000, … with no gaps or repeats; every row has `eval_n = 120` and `wins + losses + ties = 120`.
-   The run is complete when the last step is 2,000,000.
+   0, 5,000, 10,000, … with no gaps or repeats; every row has `eval_n = 120` and `wins + losses + ties = 120`.
+   The run is complete when the last step is 200,000.
 4. **`train_episodes.csv`:** exactly the columns of Section 6; `step` non-decreasing; `battle_idx` 1, 2, 3, …;
-   no step beyond 2,000,000 (training past the budget is an error); `disc_shaping_sum` ≈ 0 (noted otherwise).
+   no step beyond 200,000 (training past the budget is an error); `disc_shaping_sum` ≈ 0 (noted otherwise).
 5. **`final_eval.csv`:** exactly the columns of `recorder.FINAL_FIELDS`; exactly three rows, heuristic (1,020
-   battles), random (204) and maxbp (204), all at step 2,000,000.
+   battles), random (204) and maxbp (204), all at step 200,000.
 6. **Checkpoints:** `ckpt/step_<step>.pt` at every evaluation via the `save` callback; the final one,
-   `ckpt/step_2000000.pt`, MUST exist (noted if missing). It is needed for the move-usage replay below.
+   `ckpt/step_200000.pt`, MUST exist (noted if missing). It is needed for the move-usage replay below.
 7. **Policy loader:** `src/DQN/policy.py` MUST provide
 
    ```python
@@ -396,10 +396,18 @@ DQN − PPO interaction for RQ2), `curves_ppo.png`, `curves_dqn.png`, `threshold
 * **Threshold steps:** first evaluation step where win rate ≥ b_team + 0.10 for 2 consecutive evaluations
   (b_team = heuristic baseline for that team version). "Not reached" is NaN, never the last step.
 * **AUC:** trapezoidal area under (step, win rate) from 0 to the current step, ÷ current step = average
-  evaluation win rate over training. **Headline sample-efficiency number: AUC at 2,000,000.**
+  evaluation win rate over training. **Headline sample-efficiency number: AUC at 200,000.**
 * **Stability:** largest drop between consecutive evaluations; std of the last 5 evaluations.
 * **RL lift:** final win rate − b_team. Headline: HighVar lift − LowVar lift, per algorithm.
 * **RQ2 test:** the LowVar→HighVar change in AUC (and threshold steps) for DQN vs for PPO, every seed shown.
+
+**Observed in the 2M-step PPO pilot (`runs/pilot_2M/`, 3 runs stopped at ≈ 870k steps):** every run reached
+100% evaluation win rate by 30k–80k steps and stayed there. This is why the budget is 200k and evaluation is
+every 5k. Consequences for the metrics: the threshold (b_team + 0.10 ≈ 0.53) is crossed within ~20k steps,
+and can even be "reached" at step 0 when an untrained greedy policy happens to beat the heuristic (seen once),
+so **AUC is the primary sample-efficiency metric**; final win rates will be close to 1.0 for every run, so the
+lift difference is expected to be near 0. The pilot's winning line (seen with `src/watch_battle.py`) is a
+Kingambit Swords Dance sweep that uses none of the swapped moves.
 
 ---
 
@@ -413,7 +421,7 @@ DQN − PPO interaction for RQ2), `curves_ppo.png`, `curves_dqn.png`, `threshold
    * ε-greedy never samples an illegal action.
 3. **Smoke run:** 20,000 steps against `MaxBasePowerPlayer` (`make_env(..., opponent="maxbp")` and
    `RunRecorder(..., suffix="smoke", opponent="maxbp")`) gives a clearly rising evaluation win rate,
-   `eval.csv` rows at 0, 10k and 20k, and a correctly redrawn `learning_curve.png`. Use MaxBasePower, not
+   `eval.csv` rows every 5k from 0 to 20k, and a correctly redrawn `learning_curve.png`. Use MaxBasePower, not
    Random: an untrained greedy policy already beats `RandomPlayer` ~87% of the time, so there is no room to
    rise. PPO reference (`python src/train_ppo.py --team lowvar --seed 0 --steps 20000 --opponent maxbp
    --suffix smoke --skip-final-eval`): 0.458 → 0.617 → 0.908. DQN learns more slowly early on
@@ -434,18 +442,19 @@ DQN − PPO interaction for RQ2), `curves_ppo.png`, `curves_dqn.png`, `threshold
 | Bootstrapping on terminal / not on truncated | wrong targets | `done_for_target = terminated` |
 | `-inf * 0` in target | NaN loss | `torch.where`, not multiplication |
 | Raw poke-env env or a copied encoder | steps or observations differ from PPO | `make_env`, shared modules |
-| Replay buffer of 1M | out of memory with 6 runs | ~100k (Section 5.5) |
+| Replay buffer of 1M | out of memory with parallel runs | ~100k (Section 5.5) |
 | Stochastic evaluation | curves not comparable with PPO | greedy, `RunRecorder.evaluate` |
-| Running past 2M steps | unequal budget | stop exactly at `TOTAL_STEPS` |
+| Running past 200k steps | unequal budget | stop exactly at `TOTAL_STEPS` |
 | Editing shared files mid-batch | silent observation/reward changes | never; restart all runs |
 | Crashed process restarted with the same Showdown names | env attaches to a half-played battle | handled by the per-launch name suffix; `reset` raises if Φ(s₀) ≠ 0 |
 | Orphaned battles from crashes | server slows over time | restart Showdown before each batch |
 
-**Time:** at about 124 steps/s per process with 6 processes on one 12-core machine, 2M steps take about
-4.5 h plus about 1 h of evaluation: **≈ 5.5–6 h for the 6 DQN runs in parallel**, on a machine with its
-own Showdown server. Running the DQN and PPO batches simultaneously on the same server makes the server
-the bottleneck (≈ 10+ h for both). DQN's per-step compute (1 gradient step of batch 32 every 4 steps) is
-comparable to PPO's, so the environment dominates either way.
+**Time:** with 3 runs in parallel on the 12-core laptop (≈ 184 steps/s per process for PPO), one 200k-step
+run takes about 18 min of training + 6 min of in-training evaluation + 2 min of final evaluation ≈ 27 min;
+**the 10 runs take ≈ 1.8 h** (4 waves of 3). Each run needs ≈ 1 GB of RAM (plus the replay buffer for DQN,
+≈ 0.6 GB at 100k), so 3 in parallel is the safe default on a 15 GB machine. Running the DQN and PPO batches at
+the same time on one Showdown server makes the server the bottleneck. DQN's per-step compute (1 gradient
+step of batch 32 every 4 steps) is comparable to PPO's, so the environment dominates either way.
 
 ---
 

@@ -110,16 +110,25 @@ MaskablePPO with `config.PPO_KWARGS`, CPU, 1 torch thread per process, random-is
 | Processes | Steps/s per process | Total steps/s |
 |---|---|---|
 | 1 | 347 (placeholder encoder) | 347 |
+| 3 | 184 | 519 |
 | 6 | 124 | 709 |
 
-With 6 runs in parallel, Showdown is the bottleneck. In-training evaluation adds about 22%.
-**`TOTAL_STEPS = 2_000_000`** decision steps per run: about 4.5 h of training + 1 h of evaluation, so
-about 5.5–6 h for all 6 runs of one algorithm in parallel. The DQN arm uses the same value.
+With 6 runs in parallel, Showdown is the bottleneck. Each run uses ≈ 1 GB of RAM.
+
+**Pilot (batch `ppo-batch-1`, 2M steps, 3 seeds; archived in `runs/pilot_2M/`).** Stopped at ≈ 870k steps:
+all 3 runs reached 100% evaluation win rate vs the heuristic by 30k–80k steps and stayed there (training
+win rate ≈ 98%). The learned line exploits the deterministic heuristic (Kingambit Swords Dance sweep, no
+swapped moves used; `src/watch_battle.py`). The threshold metric degenerates (crossed by ~20k steps; once
+"reached" at step 0 by an untrained policy), so AUC is the primary metric. HighVar s0 showed dips after
+first reaching 1.0 (0.65 at 30k, 0.79 at 70k, both vs team C); LowVar runs barely did.
+
+**Decision (2026-10-20): `TOTAL_STEPS = 200_000`, 5 seeds (0–4), `EVAL_FREQ = 5_000`.** 10 runs per
+algorithm; at 3 in parallel ≈ 27 min per run, ≈ 1.8 h per batch. The DQN arm uses the same values.
 
 ## Running a batch
 
-`src/run_batch.py` (see its docstring for the exact command): 6 runs, 3 at a time on the laptop (each run
-≈ 1 GB RAM and < 1 core; 184 steps/s per process at 3 parallel → ≈ 3.7 h per wave, ≈ 7.5 h total).
+`src/run_batch.py` (see its docstring for the exact command): 10 runs, 3 at a time on the laptop (each run
+≈ 1 GB RAM and < 1 core; 184 steps/s per process at 3 parallel → ≈ 27 min per run, ≈ 1.8 h total).
 Launch detached with `setsid nohup` and under `systemd-inhibit --what=sleep:idle:handle-lid-switch`, with
 the Showdown server also started detached, so neither a closed terminal, a closed lid nor the end of an
 editor session kills the batch. Keep the laptop plugged in. No resume: an interrupted run starts over.

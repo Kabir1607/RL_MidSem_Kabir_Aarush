@@ -44,15 +44,17 @@ order (`/team 1234`). Spec Appendix A (doubles) does not apply.
    `SingleAgentWrapper` only its `choose_move` is called, and the env's own `agent2` plays on Showdown.
 
 **Stats utility.** `poke_env.stats.compute_raw_stats(species, evs, ivs, level, nature, GenData)` returns
-`[hp, atk, def, spa, spd, spe]` with the standard Gen 3+ formulas. Use it in `teamsheet.py`.
+`[hp, atk, def, spa, spd, spe]` with the standard Gen 3+ formulas. Used in `teamsheet.py`. Test 2 checks it
+against Showdown's own simulator (`tests/showdown_stats.js` runs `pokemon-showdown/dist/sim` in Node, no
+server needed) for all 20 team slots; they match.
 
 **MaskablePPO keywords.** All names in spec Section 5.2 exist in sb3-contrib 2.9.0. Note the defaults differ
 from the spec for `batch_size` (64) and `ent_coef` (0.0), so both must be passed explicitly (they are, in
 `config.PPO_KWARGS`).
 
-**Showdown usernames.** userid (lowercase, non-alphanumerics stripped) must be ≤ 18 characters
-(`pokemon-showdown/server/users.ts`). `config.account_name` asserts this; the longest is
-`dqn_hv_s2_evopp`.
+**Showdown usernames.** The full display name, underscores included, must be ≤ 18 characters: longer names
+are cut to 18 by `Chat.namefilter` (`pokemon-showdown/server/chat.ts`), and poke-env then fails its login
+check ("Expected <name> to be logged in"). Format: `ppo_lv0_evopp_3f9a` (see item 9 for the tag).
 
 ## Other things the spec does not cover
 
@@ -67,8 +69,8 @@ from the spec for `batch_size` (64) and `ent_coef` (0.0), so both must be passed
 3. **Wait steps.** When we get a "wait" request (only the opponent must act, e.g. its forced switch),
    `PokeEnv.step` still returns to the agent: `battle1` is stale, `battle._wait` is True, the mask is `[0]`,
    and the next action is ignored (`agent1_to_move` is False). These are not decision requests (spec 4.1).
-   **Decision:** the wrapper steps through them internally with action 0 and adds up their rewards.
-   Confirm with a smoke test in Phase 2.
+   **Decision:** the wrapper steps through them internally while `agent1_to_move` is False. Confirmed in
+   Phase 2: 0–3 such steps per battle, and `tests/test_env_live.py` checks none reach the agent.
 
 4. **Ties come back as `truncated`.** `PokeEnv.calc_term_trunc` sets `truncated=True` when a finished battle
    doesn't have exactly one side wiped (ties, forfeits). **Decision:** the wrapper sets
@@ -90,3 +92,31 @@ from the spec for `batch_size` (64) and `ent_coef` (0.0), so both must be passed
    LowVar 0.4287, HighVar 0.4373; threshold = b_team + 0.10. Per opponent it is very uneven
    (B ≈ 1.0, A ≈ 0.05–0.08, C ≈ 0.24–0.25), which is why evaluation is stratified.
    Mean battle length for the heuristic pilot is ≈ 10.4 turns (the spec's ≈ 13 was the random pilot).
+
+9. **Never reuse Showdown names across process launches.** When a process dies mid-battle, Showdown keeps
+   the battle open. The next login with the same name gets that battle re-attached a moment after login,
+   and the env either treats the half-played battle as a new episode (seen: Phi(s_0) = 0.07) or fails on
+   the following reset ("Can not reset player's battles while they are still running").
+   **Decision:** names end in `config.LAUNCH_TAG`, 4 random hex characters per process launch.
+   `OTSWrapper.reset` also raises if Phi(s_0) ≠ 0, which catches a re-attached battle.
+   Orphaned battles stay on the server until it restarts; restart Showdown before each batch of runs.
+
+## Throughput and step budget
+
+`src/bench_env.py` on the 12-core dev machine, local Showdown server, full encoder (763 features),
+MaskablePPO with `config.PPO_KWARGS`, CPU, 1 torch thread per process, random-ish early policy
+(about 18 decision steps per battle):
+
+| Processes | Steps/s per process | Total steps/s |
+|---|---|---|
+| 1 | 347 (placeholder encoder) | 347 |
+| 6 | 124 | 709 |
+
+With 6 runs in parallel, Showdown is the bottleneck. In-training evaluation adds about 22%.
+**`TOTAL_STEPS = 2_000_000`** decision steps per run: about 4.5 h of training + 1 h of evaluation, so
+about 5.5–6 h for all 6 runs of one algorithm in parallel. The DQN arm uses the same value.
+
+## More findings
+
+10. **Gymnasium 1.x wrappers don't forward attributes.** `Monitor(env).action_masks()` raises
+    AttributeError. Use `env.get_wrapper_attr("action_masks")()`, which is what sb3-contrib does.

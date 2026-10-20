@@ -3,6 +3,7 @@
 Never edit this file in the middle of a batch of runs (spec Section 2.6).
 """
 
+import secrets
 from pathlib import Path
 
 from poke_env.ps_client import LocalhostServerConfiguration
@@ -41,7 +42,7 @@ ACTION_SPACE_SIZE = 26  # SinglesEnv, gen 9
 
 NET_ARCH = [256, 256]  # shared with the DQN arm (spec Section 5.4)
 SEEDS = (0, 1, 2)
-TOTAL_STEPS = None  # decision steps per run; set from the Phase 2 throughput benchmark, identical for every run
+TOTAL_STEPS = 2_000_000  # decision steps per run (as counted by env.make_env), identical for every run of both algorithms
 
 PPO_KWARGS = dict(
     learning_rate=3e-4,
@@ -75,16 +76,19 @@ EP_LEN_ROLLING_WINDOW = 200  # battles
 # ---------- Showdown accounts ----------
 
 ROLES = ("agent", "opp", "eval", "evopp")
-MAX_USERNAME_LEN = 18  # Showdown rejects userids longer than this (server/users.ts)
+MAX_USERNAME_LEN = 18  # Showdown truncates longer names (server/chat.ts namefilter), which breaks poke-env login
+# Random per process launch. Showdown keeps a battle open when its process dies, and re-attaches it to
+# the next login with the same name, so a restarted run must never reuse names (NOTES.md item 9).
+LAUNCH_TAG = secrets.token_hex(2)
 
 
 def run_id(algo, team, seed):
     return f"{algo}_{team}_s{seed}"
 
 
-def account_name(algo, team, seed, role):
-    """Unique per process and role, e.g. ppo_lv_s0_agent (spec Section 5.2)."""
+def account_name(algo, team, seed, role, tag=LAUNCH_TAG):
+    """Unique per run, role and launch, e.g. ppo_lv0_agent_3f9a (spec Section 5.2)."""
     assert role in ROLES, role
-    name = f"{algo}_{TEAM_ABBREV[team]}_s{seed}_{role}"
+    name = f"{algo}_{TEAM_ABBREV[team]}{seed}_{role}_{tag}"
     assert len(name) <= MAX_USERNAME_LEN, name
     return name

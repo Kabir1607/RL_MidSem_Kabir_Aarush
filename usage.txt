@@ -1,14 +1,56 @@
-After cloning pokemon-showdown run: 
+Run commands from the repository root unless a step changes directories.
 
-For pokemon-showdown running server: 
-cd pokemon-showdown
-npm install
-cp config/config-example.js config/config.js
-node pokemon-showdown start --no-security
+ONE-TIME SETUP
 
-Then:
-python -m venv venv // create a venv if not there
-source venv/bin/activate
-pip install -r requirements.txt
-python src/main.py 
+1. Install/use Node 22 through nvm. The pinned Showdown revision requires
+   Node >=22.18.0; Node 18 is too old.
+
+   source "$HOME/.nvm/nvm.sh"
+   nvm install 22
+   nvm use 22
+
+2. Fetch the exact Showdown revision recorded by this repository, install its
+   dependencies and configure the custom format required by src/config.py.
+   If an earlier npm command created files in pokemon-showdown before cloning,
+   move those files aside first so they do not conflict with checkout.
+
+   git submodule update --init pokemon-showdown
+   cd pokemon-showdown
+   npm ci
+   cp config/config-example.js config/config.js
+   printf '\nexports.bindaddress = "127.0.0.1";\n' >> config/config.js
+   cp ../showdown-custom-formats.ts config/custom-formats.ts
+   npm run build
+   cd ..
+
+   The custom format is gen9ounotera: Gen 9 OU with Terastal Clause for both
+   players. It must be copied again after changing the template.
+
+3. Create/activate the Python environment and install the pinned dependencies.
+   Skip the venv creation command if venv already exists.
+
+   python3 -m venv venv
+   source venv/bin/activate
+   python -m pip install -r requirements.txt
+
+EVERY SESSION
+
+Terminal 1: start the local battle server and leave it running.
+
+   source "$HOME/.nvm/nvm.sh"
+   nvm use 22
+   cd pokemon-showdown
+   node pokemon-showdown start 8000 --no-security
+
+Terminal 2: activate Python, then verify the setup from the repository root.
+
+   source "$HOME/.nvm/nvm.sh"
+   nvm use 22
+   source venv/bin/activate
+   python src/main.py
+   python src/check_teams.py
+   python -m pytest -q
+
+The server listens on localhost:8000. --no-security is for local bot experiments.
+Ctrl+C in Terminal 1 stops the server. Training requires it to stay running.
 

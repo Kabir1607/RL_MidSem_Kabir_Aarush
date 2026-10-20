@@ -1,0 +1,124 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=25mm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,longtable,array}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist{nosep}
+\setlength{\emergencystretch}{3em}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\title{Masked DQN for the Pokemon Midsem Experiment\\Design Decisions and Implementation Plan}
+\author{RL Midsem: Kabir and Aarush}
+\date{20 October 2026}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Status: implemented; validation recorded separately.} This document records the decisions for the DQN arm. The shared and DQN test suites pass; smoke-run measurements and remaining research work are recorded in the companion implementation guide, \code{src/DQN/README.md}. The ten main research runs have not been launched by this implementation task.
+
+\section{Authority, objective, and boundaries}
+The user's request and \code{docs/builder_notes.txt} set the scope: reuse the existing teams and implement executable DQN code only under \code{src/DQN/}. The requested design document is the explicit exception outside that folder. Reuse shared modules by import rather than copying or editing them.
+
+The DQN reference \code{src/DQN/DQN_Reference/reference.md} supplies algorithm requirements. Shared executable code determines the current environment and output interfaces. The newer PPO specification and \code{NOTES.md} provide context; \code{docs/proposal.pdf} is historical research guidance. In particular, the proposal's 6v6 and three-seed setup is superseded by the current 4v4, five-seed setup. The reference's occasional mentions of six runs and seeds 0--2 are stale: \code{config.SEEDS} currently contains 0--4, giving ten runs per algorithm.
+
+The objective is to compare the LowVar--HighVar change in learning curves for vanilla DQN against PPO. Double DQN, dueling networks, prioritized replay, recurrence, multi-step targets, reward changes, and additional observation features are excluded from this implementation. Long research batches are a subsequent execution stage.
+
+\section{Environment and information}
+Each episode is a Gen 9 OU singles battle with four Pokemon per side, fixed first-slot leads, and Terastallization disabled for both sides by \code{gen9ounotera}. Our team is either \code{lowvar} or \code{highvar}. Each training battle samples opponent A, B, or C uniformly; \code{SimpleHeuristicsPlayer} chooses its actions. DQN controls only our side.
+
+Our agent knows full team sheets, including spreads and stats, while the scripted opponent uses its existing information. The encoder remains an approximation to the full simulator state: full sheets do not guarantee exact Markov observability. Do not alter this information setting for DQN.
+
+\begin{center}
+\begin{tabular}{lrp{8cm}}
+\toprule
+Observation block & Size & Contents\\
+\midrule
+Eight Pokemon rows & 728 & Eight rows of 91: HP, fainting, status, active flag, stats, types, item, ability, and four move descriptions.\\
+Active matchup & 20 & Boosts, approximate speed comparison, toxic counters.\\
+Field & 15 & Hazards, screens, scaled turn count.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The input is a \code{float32} vector of length 763. Most features lie in $[0,1]$; boosts and move priority can be negative. Move descriptions encode power, accuracy, category, priority, effectiveness, STAB, and PP; they do not directly describe every special move effect. Pokemon rows retain team-file identity after switches.
+
+The action space has 26 indices: 0--5 represent team switches, 6--9 the active Pokemon's four move slots, and 10--25 gimmicks. Indices 4, 5, and 10--25 are permanently unavailable here. Other restrictions change with the battle. Read the separate boolean mask from \code{env.get_wrapper_attr("action_masks")()}; do not infer legality from the observation.
+
+Showdown executes the transition after our action, the opponent's action, and game randomness. We do not implement battle mechanics or learn a transition model. One environment step is one decision request. Forced replacements and pivot moves can produce additional decisions within a game turn; opponent-only wait requests are skipped by the shared wrapper.
+
+\section{Reward and learning objective}
+With $N=4$, the existing potential is
+\[
+\Phi(s)=\frac{1}{2}\frac{HP_{ours}-HP_{opp}}{N}
++\frac{1}{2}\frac{alive_{ours}-alive_{opp}}{N}.
+\]
+HP totals sum HP fractions. The wrapper returns
+\[
+r'_t=r^{base}_t+\gamma\Phi(s_{t+1})-\Phi(s_t),\qquad \gamma=0.99,
+\]
+where the base terminal reward is $+1$, $-1$, or zero for win, loss, or tie. It explicitly sets $\Phi(terminal)=0$ and starts with $\Phi(s_0)=0$. For completed battles, the discounted shaping terms telescope to zero. DQN must consume the returned reward without a second shaping calculation and use \code{config.GAMMA}.
+
+Let $m'$ be the next-state legality mask and $d$ mean actual battle termination. Vanilla DQN uses
+\[
+y=r'+\gamma\begin{cases}
+0,& d=1,\\
+\max_{a':m'(a')=1}Q_{\bar\theta}(s',a'),& d=0.
+\end{cases}
+\]
+The online network minimizes mean Huber loss between $Q_\theta(s,a)$ and the detached target $y$. The target network begins as an exact copy and is periodically synchronized. An artificial time limit causes \code{truncated=True}, not $d=1$: bootstrap from the pre-reset observation, then reset the episode. A terminal all-false mask is permitted; never multiply negative infinity by zero. Nonterminal all-false masks are errors.
+
+\section{Decisions and rationale}
+\begin{longtable}{p{0.20\linewidth}p{0.72\linewidth}}
+\toprule
+Decision & Selection and reason\\
+\midrule
+Algorithm & Vanilla masked DQN. Retain the maximum operator relevant to the proposed overestimation hypothesis. No Double DQN option in the main arm.\\
+Network & Linear--ReLU--Linear--ReLU--Linear, dimensions $763\to256\to256\to26$. Read input/output sizes from the environment and hidden sizes from shared config; assert compatibility. No softmax, dropout, or extra normalization.\\
+Replay & Uniform ring buffer, capacity 100,000; separate float32 observations and next observations, int64 actions, float32 rewards, bool next masks and termination flags. Copy inputs on insertion. About 0.61 GB for observation arrays alone.\\
+Optimization & Adam, learning rate $10^{-4}$, default betas $(0.9,0.999)$, epsilon $10^{-8}$, zero weight decay; batch 32, Huber delta 1, gradient norm clipping 10.\\
+Timing & Begin learning strictly after 5,000 collected decisions; one gradient step every four decisions. First update at 5,004. Hard target copy every 2,000 decisions, after a gradient update if both coincide.\\
+Exploration & With $t$ decisions already collected, $\epsilon(t)=1-0.95\min(t/20000,1)$. Random exploration samples only legal actions; greedy selection masks illegal values and resolves ties by the first index.\\
+Randomness & Call shared seeding helper; use separate NumPy generators for exploration and replay sampling, spawned from the run seed. Evaluation must not consume those streams. Showdown battle RNG is not fully controlled by this seed.\\
+Scope & All learner code, new tests, CLI tools, and Markdown documentation remain inside \code{src/DQN/}. Shared files, team files, existing run artifacts, and the DQN reference remain unchanged.\\
+Batch adapter & Add a DQN-local command that imports the shared scheduler and registers the trainer in its process-local registry. This resolves the reference's suggestion to edit the shared runner without violating builder notes.\\
+Checkpoint & Atomic inference checkpoints at every evaluation. Include online weights, step, architecture, version, team, seed, profile, gamma, and effective hyperparameters. No replay or resumable training state; interrupted runs restart explicitly.\\
+\bottomrule
+\end{longtable}
+
+The replay target masks exploration, action selection, and bootstrapping consistently. Inference uses raw Q-values, never probabilities. Values are monitored for non-finite results or divergence; the reference's approximate value range is a diagnostic, not a clipping rule.
+
+\section{Training lifecycle and interfaces}
+Create the shared environment with \code{make_env(team, seed, algo="dqn")}. Use \code{RunRecorder} for configuration, completed episodes, checkpoints, evaluations, plots, and final evaluations. At step zero evaluate and save the initialized policy, then start training. For each collected decision: choose a masked epsilon-greedy action; step; copy the next mask and observation into replay before any reset; update the learner and target on schedule; record completed episodes; evaluate if due. Reset only when the episode ended and more training decisions remain.
+
+Stop after exactly \code{config.TOTAL_STEPS} decisions, currently 200,000. Evaluation is external to this budget. The final checkpoint and final evaluations refer to identical weights; no update follows the final checkpoint. An unfinished episode at the budget is not converted into a terminal transition or a fabricated episode row. Cleanup closes both training and evaluation environments even on failure; interruptions do not create a successful final-evaluation record.
+
+Expose the required interface in \code{src/DQN/policy.py}:
+\begin{verbatim}
+load_policy(checkpoint_path: Path)
+    -> Callable[[np.ndarray, np.ndarray], int]
+\end{verbatim}
+The loader constructs a CPU evaluation network from validated versioned metadata, loads weights using \code{weights_only=True}, and returns deterministic masked greedy inference without starting a server or training objects. The saver converts dimensions, step, and seed to native Python integers: Gymnasium supplies NumPy integer dimensions that the restricted loader would otherwise reject.
+
+Use two fixed CLI profiles. Main is the shared 200,000-step heuristic protocol with unsuffixed run names. Smoke is 20,000 steps against MaxBasePower, suffix \code{smoke}, learning starts 1,000 and exploration decay 10,000; it omits final evaluations. These differences are logged and smoke runs are excluded from research analysis. No arbitrary learning hyperparameter overrides are exposed in the first CLI.
+
+\section{Evaluation, diagnostics, and interpretation}
+Use the shared recorder unchanged: evaluation at 0 and every 5,000 decisions, 120 battles stratified 40 per opponent; final evaluation at 200,000 with 1,020 heuristic, 204 random, and 204 max-base-power battles. The main run grid is two team variants by five seeds. Shared CSV fields remain exact; inference checkpoints use \code{ckpt/step_<step>.pt}.
+
+Use the recorder's optional scalar logger for loss, chosen-action Q-values, epsilon, replay size, and update counts. A separate DQN-owned episode diagnostic file records initial maximum legal Q, initial chosen-action Q, and realized discounted shaped return. The behavior policy explores and changes during training, so this comparison is not an unbiased measurement of frozen greedy-policy overestimation. Formal mechanism claims require a subsequent frozen-policy replay diagnostic.
+
+Primary analysis is AUC at the common budget, with every seed shown. Also report threshold crossing, stability, final Wilson intervals, and RL lift using shared analysis. Stronger inaccurate moves change expected damage, PP, and some secondary effects; this is not a pure mean-preserving variance intervention. The PPO pilot learned a Kingambit sweep avoiding swapped moves. Preserve the required loader for the separately planned cross-algorithm move-usage replay; do not alter teams or rewards to force those moves. Full batches and that separate replay study are not claimed complete by this plan.
+
+\section{Implementation stages and acceptance}
+\begin{enumerate}
+\item Implement and test the network, masks, replay, target calculation, and epsilon schedule without a server.
+\item Implement atomic checkpoint saving and standalone loading; test legality, deterministic reloads, and invalid metadata.
+\item Integrate the trainer and shared recorder, plus the DQN-local batch adapter. Test exact decision budgets and schema compatibility using fake environments and temporary output directories.
+\item Run the existing suite and DQN tests explicitly together. New tests live under \code{src/DQN/tests/}; the existing default pytest configuration does not discover them automatically.
+\item With Showdown running, verify a short battle, then perform the fixed 20,000-step smoke protocol. Require finite updates, legal actions, five evaluation points, loadable checkpoints, and visible improvement. Improvement is empirical; failure triggers investigation rather than an invented success claim or unlogged main-run tuning.
+\item Only afterward run ten committed main jobs and verify that existing analysis accepts their outputs. Do not launch the long batch merely to implement or document the learner.
+\end{enumerate}
+
+\noindent Unit scenarios include illegal next Q set to $10^6$, terminal all-false masks, mixed terminal/truncated minibatches, immutable replay copies, ring wraparound, seeded sampling, target synchronization, and gradients flowing only through the online selected-action prediction. Integration scenarios include storing terminal observations before reset, preserving exploration streams across evaluation, correct stop behavior, non-overwrite by default, and cleanup on exceptions. Test outcomes and training measurements must be added to the implementation guide only after execution.
+
+\end{document}

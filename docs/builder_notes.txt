@@ -1,0 +1,5 @@
+use the same team, it's the lowvar.txt and highvar.txt that are our testing teams And the rest of them are opponent teams in the teams folder
+For when you are implementing DQN:
+    he reference and some specifications for fairness are in src/DQN/DQN_Reference/reference.md
+    It should have some functions you need as well, just point LLM to it
+    implement your part in the DQN folder only

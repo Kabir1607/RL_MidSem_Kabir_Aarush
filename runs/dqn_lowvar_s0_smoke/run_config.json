@@ -1,0 +1,175 @@
+{
+  "run_id": "dqn_lowvar_s0_smoke",
+  "algo": "dqn",
+  "team": "lowvar",
+  "seed": 0,
+  "eval_opponent": "maxbp",
+  "b_team": 0.4287,
+  "hyperparameters": {
+    "profile": "smoke",
+    "total_steps": 20000,
+    "opponent": "maxbp",
+    "suffix": "smoke",
+    "learning_rate": 0.0001,
+    "buffer_size": 100000,
+    "learning_starts": 1000,
+    "batch_size": 32,
+    "train_freq": 4,
+    "gradient_steps": 1,
+    "target_update_interval": 2000,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.05,
+    "exploration_steps": 10000,
+    "gamma": 0.99,
+    "max_grad_norm": 10.0,
+    "adam_betas": [
+      0.9,
+      0.999
+    ],
+    "adam_eps": 1e-08,
+    "weight_decay": 0.0,
+    "huber_delta": 1.0,
+    "net_arch": [
+      256,
+      256
+    ],
+    "optimizer": "Adam",
+    "loss": "Huber",
+    "algorithm": "vanilla_dqn"
+  },
+  "config": {
+    "ROOT": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush",
+    "TEAMS_DIR": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams",
+    "RUNS_DIR": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/runs",
+    "FIGURES_DIR": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/figures",
+    "BATTLE_FORMAT": "gen9ounotera",
+    "SERVER_CONFIGURATION": [
+      "ws://localhost:8000/showdown/websocket",
+      "https://play.pokemonshowdown.com/action.php?"
+    ],
+    "N_TEAM": 4,
+    "TEAMS": [
+      "lowvar",
+      "highvar"
+    ],
+    "OUR_TEAM_FILES": {
+      "lowvar": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams/lowvar.txt",
+      "highvar": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams/highvar.txt"
+    },
+    "OPP_TEAM_FILES": {
+      "A": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams/opp_a.txt",
+      "B": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams/opp_b.txt",
+      "C": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/Teams/opp_c.txt"
+    },
+    "TEAM_ABBREV": {
+      "lowvar": "lv",
+      "highvar": "hv"
+    },
+    "BASELINE_CSV": "/home/mushu/GitHub/RL_MidSem_Kabir_Aarush/baselines_summary.csv",
+    "BASELINE_TEAM_KEY": {
+      "lowvar": "low",
+      "highvar": "high"
+    },
+    "BASELINE_COLUMNS": {
+      "team": "team_version",
+      "pilot": "pilot",
+      "opponent": "opponent_team",
+      "win_rate": "win_rate"
+    },
+    "BASELINE_PILOT": "heuristic",
+    "BASELINE_OPPONENT": "all",
+    "GAMMA": 0.99,
+    "MAX_EPISODE_STEPS": 300,
+    "ACTION_SPACE_SIZE": 26,
+    "NET_ARCH": [
+      256,
+      256
+    ],
+    "DEVICE": "cpu",
+    "TORCH_THREADS": 1,
+    "SEEDS": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "TOTAL_STEPS": 200000,
+    "PPO_KWARGS": {
+      "learning_rate": 0.0003,
+      "n_steps": 2048,
+      "batch_size": 128,
+      "n_epochs": 10,
+      "gamma": 0.99,
+      "gae_lambda": 0.95,
+      "clip_range": 0.2,
+      "ent_coef": 0.01,
+      "vf_coef": 0.5,
+      "max_grad_norm": 0.5,
+      "normalize_advantage": true,
+      "policy_kwargs": {
+        "net_arch": {
+          "pi": [
+            256,
+            256
+          ],
+          "vf": [
+            256,
+            256
+          ]
+        }
+      }
+    },
+    "EVAL_FREQ": 5000,
+    "N_EVAL": 120,
+    "EVAL_OPP_ORDER": [
+      "A",
+      "B",
+      "C"
+    ],
+    "FINAL_EVAL_N_HEURISTIC": 1020,
+    "FINAL_EVAL_N_SANITY": 204,
+    "WILSON_Z": 1.959964,
+    "THRESHOLD_MARGIN": 0.1,
+    "THRESHOLD_CONSECUTIVE": 2,
+    "STABILITY_LAST_K": 5,
+    "EP_LEN_ROLLING_WINDOW": 200,
+    "ROLES": [
+      "agent",
+      "opp",
+      "eval",
+      "evopp"
+    ],
+    "MAX_USERNAME_LEN": 18,
+    "LAUNCH_TAG": "cb44"
+  },
+  "extra": {
+    "profile": "smoke",
+    "skip_final_eval": false
+  },
+  "git": {
+    "commit": "0720f9393f025a598b97048f724065566b2f8ae1",
+    "dirty": true
+  },
+  "accounts": {
+    "eval": [
+      "dqn_lv0_eval_cb44",
+      "dqn_lv0_evopp_cb44"
+    ],
+    "train": [
+      "dqn_lv0_agent_cb44",
+      "dqn_lv0_opp_cb44"
+    ]
+  },
+  "python": "3.12.3",
+  "versions": {
+    "poke_env": "0.16.1",
+    "stable_baselines3": "2.9.0",
+    "sb3_contrib": "2.9.0",
+    "gymnasium": "1.3.0",
+    "torch": "2.14.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6"
+  },
+  "started": "2026-10-20 22:43:18"
+}

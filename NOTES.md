@@ -116,6 +116,15 @@ With 6 runs in parallel, Showdown is the bottleneck. In-training evaluation adds
 **`TOTAL_STEPS = 2_000_000`** decision steps per run: about 4.5 h of training + 1 h of evaluation, so
 about 5.5–6 h for all 6 runs of one algorithm in parallel. The DQN arm uses the same value.
 
+## Running a batch
+
+`src/run_batch.py` (see its docstring for the exact command): 6 runs, 3 at a time on the laptop (each run
+≈ 1 GB RAM and < 1 core; 184 steps/s per process at 3 parallel → ≈ 3.7 h per wave, ≈ 7.5 h total).
+Launch detached with `setsid nohup` and under `systemd-inhibit --what=sleep:idle:handle-lid-switch`, with
+the Showdown server also started detached, so neither a closed terminal, a closed lid nor the end of an
+editor session kills the batch. Keep the laptop plugged in. No resume: an interrupted run starts over.
+Each batch starts from a committed, tagged state (`run_batch.py` refuses uncommitted `src/` or `Teams/`).
+
 ## More findings
 
 10. **Gymnasium 1.x wrappers don't forward attributes.** `Monitor(env).action_masks()` raises

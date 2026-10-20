@@ -5,3 +5,4 @@ __pycache__/
 .~lock.*#
 runs/*/ckpt/
 runs/*/tb/
+runs/logs/
